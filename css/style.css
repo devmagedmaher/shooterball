@@ -1,0 +1,14 @@
+body{
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+#data{
+  display: block;
+  border-bottom: 4px solid #901;
+  background-color: #222;
+}
+
+#canvas {
+  background-color: #111;
+}
