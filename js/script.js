@@ -90,6 +90,7 @@
     bulletInterval: 60 * 0.08,
     bulletSizeMin: 1,
     bulletSizeMax: 3,
+    bulletPower: 1,
     
     enemyInterval: 60 * 1,
     enemySpeed: 0.2,
@@ -244,7 +245,7 @@ function Bomb(x, y) {
       dy = (this.y - enemy.y);
       distance = Math.sqrt(dx*dx+dy*dy);
       if (distance < this.radius + enemy.radius) {
-        enemy.radius -= 0.1;
+        enemy.life -= 0.1;
         enemy.target = this;
       }
     }
@@ -284,15 +285,21 @@ var player = {
   y: canvas.height/2 - 20,
   xSpeed: 0,
   ySpeed: 0,
-  maxSpeed: 8,
+  maxSpeed: 16,
   accel: 0.25,
-  fraction: 0.98,
+  fraction: 0.95,
   angel: 0,
   fireDefault: 10,
   fireCounter: 10,
   fireSpeed: 0.5,
+  dashSpeed: 30,
+  dashMode: false,
+  dashTime: 15,
+  dashTimeCounter: 0,
+  life: 20,
   
   render: function () {
+    this.isDead();
     this.isOut();
     this.move();
     this.fire();
@@ -309,14 +316,24 @@ var player = {
     c.fillStyle = "#fff";
     c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
     c.fill();
-    c.lineWidth = this.radius/2;
-    c.strokeStyle = '#900';
-    c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
-    c.stroke();
+
+    c.beginPath();
     c.moveTo(this.x, this.y - this.radius);
     c.lineTo(this.x-this.radius-(this.fireCounter*3), this.y);
     c.lineTo(this.x, this.y + this.radius);
     c.fill();
+
+    c.beginPath();
+    c.lineWidth = this.radius/10;
+    c.strokeStyle = '#900';
+    c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+    c.stroke();
+
+    c.beginPath();
+    c.lineWidth = this.radius/5;
+    c.strokeStyle = '#e00';
+    c.arc(this.x, this.y, this.radius, 0, (Math.PI*2)*(this.life/this.radius));
+    c.stroke();
 
     c.restore();
   },
@@ -329,7 +346,6 @@ var player = {
   move: function () {
     // get angel between target and player
     this.angel = this.angelTo(this, target);
-    // console.log(angelTo(this,target));
     
     // change speed based on keyboard keys
     if (Math.abs(this.ySpeed) < this.maxSpeed) {
@@ -341,9 +357,6 @@ var player = {
       if (key.right) { this.xSpeed += this.accel; }      
     }
     
-    // data text xSpeed
-    data.xspeed = this.xSpeed;
-    
     // fraction
     this.xSpeed *= this.fraction;
     this.ySpeed *= this.fraction;
@@ -351,6 +364,10 @@ var player = {
     // movement
     this.x += this.xSpeed;
     this.y += this.ySpeed;
+
+    // count dash time when needed
+    if(this.dashTimeCounter > 0) { this.dashTimeCounting(); }
+
   },
   
   isOut: function () {
@@ -359,23 +376,42 @@ var player = {
     if (this.y <= 0) { this.y = 1; this.ySpeed *= -0.5; }
     if (this.y >= canvas.height) { this.y = canvas.height - 1; this.ySpeed *= -0.5; }
   },
+
+  isDead: function () {
+    if (this.life < 0) {
+      game.pause();
+    }
+  },
   
   angelTo: function (source, target) {
     return Math.atan2((target.y - source.y), (target.x - source.x));
   },
 
   damage: function () {
+    this.bloodScreen();
+    console.log(this.life, (Math.PI*2)*(this.life/this.radius));
+  },
+
+  bloodScreen: function () {
     c.save();
     c.beginPath();
     c.fillStyle = 'rgba(255,0,0,0.1)';
     c.fillRect(0, 0, canvas.width, canvas.height);
-    c.restore();
+    c.restore();    
   },
 
+  dash: function () {
+    this.xSpeed = this.dashSpeed * Math.cos(this.angel);
+    this.ySpeed = this.dashSpeed * Math.sin(this.angel);
+    this.dashTimeCounter = this.dashTime;
+  },
+
+  dashTimeCounting: function () {
+    this.dashTimeCounter--;
+  },
 
   bomb: function () {
     bombs.push(new Bomb(this.x, this.y));
-    console.log('bomb');
   }
   
 };
@@ -430,7 +466,7 @@ function Spark(x, y, color = '#fff') {
   this.live = function () {
     this.life--;
     if (this.life < 0) { this.delete(); }
-  }
+  };
   
   this.delete = function () {
     sparks.splice(sparks.indexOf(this), 1);
@@ -460,6 +496,7 @@ function Bullet() {
   this.radius = Math.random() * (game.bulletSizeMax-game.bulletSizeMin) + game.bulletSizeMin;
   this.angel = Math.atan2((target.y - player.y), (target.x - player.x));
   this.sparkCount = Math.floor(Math.random() * (game.sparksMax-game.sparksMin) + game.sparksMin);
+  this.power = game.bulletPower;
   
   this.render = function () {
     this.isHit();
@@ -503,10 +540,10 @@ function Bullet() {
       if (distance < this.radius + enemy.radius) {
         this.spark();
         this.delete();
-        enemy.radius -= this.radius/1.5;
+        enemy.life -= this.radius*this.power;
       }      
     }
-  }
+  };
 
   this.spark = function () {
       for(var i = 0; i < this.sparkCount; i++) {
@@ -560,11 +597,12 @@ function Enemy() {
   this.target = player;
   this.collisionTimeDefault = 2;
   this.collisionTime = this.collisionTimeDefault;
-  
+  this.life = this.radius;
+
   this.render = function () {
     this.isCollision();
     this.isDead();
-    this.isHit();
+    this.isHitPlayer();
     this.followPlayer();
     this.move();
     this.draw();
@@ -576,6 +614,11 @@ function Enemy() {
     c.fillStyle = '#f00';
     c.arc(this.x ,this.y, this.radius, 0, Math.PI*2);
     c.fill();
+    c.beginPath();
+    c.strokeStyle = '#fff';
+    c.lineWidth = 2;
+    c.arc(this.x, this.y, this.radius, 0, (Math.PI*2)*(this.life/this.radius));
+    c.stroke();
     c.restore();
   };
   
@@ -594,22 +637,28 @@ function Enemy() {
     
   };
   
-  this.isHit = function () {
+  this.isHitPlayer = function () {
     // store dx, dy and calculate distance
     this.dx = this.x - player.x;
     this.dy = this.y - player.y;
     this.distance = Math.sqrt(this.dx*this.dx + this.dy*this.dy);
     if (this.distance < this.radius + player.radius) {
+      if (player.dashTimeCounter > 0) {
+        console.log('killed enemy');
+        this.spark();
+      } else {
+        player.damage();
+        player.life -= this.radius/10;
+      }
       this.delete();
-      this.spark();
-      player.damage();
-    } else if (this.distance < this.radius + (player.radius*2)) {
+    }
+    if (this.distance < this.radius + (player.radius*2)) {
       this.target = player;
     }
   }
   
   this.isDead = function () {
-    if (this.radius < game.enemySizeMin) {
+    if (this.life < 1) {
       this.delete();
       this.spark();
     } 
@@ -671,7 +720,7 @@ function Enemy() {
       target.render();
 
       // add bullets to array
-      if (mouse.down || mouse.alwaysDown) {
+      if (key.space) {
         bulletIntervalCounter++;
         if (bulletIntervalCounter >= game.bulletInterval) {
           bullets.push(new Bullet());
@@ -787,8 +836,7 @@ function Enemy() {
 
   function mouseDownHandler(e) {
     if (e.button === 0) {
-      if (mouse.down) { mouse.down = false; }
-      else            { mouse.down = true; }
+      player.dash();
     }
     if (e.button === 2) {
       player.bomb();
@@ -801,6 +849,7 @@ function Enemy() {
     if (e.key == 'a' || e.key == 'Left' || e.key == 'ArrowLeft') { key.left = true; }
     if (e.key == 's' || e.key == 'Down' || e.key == 'ArrowDown') { key.down = true; }
     if (e.key == 'd' || e.key == 'Right' || e.key == 'ArrowRight') { key.right = true; }
+    if (e.key == ' ') { if (key.space) { key.space = false; } else { key.space = true; } }
   }
 
   function keyupHandler(e) {
