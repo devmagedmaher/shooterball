@@ -1,4 +1,45 @@
 
+
+
+
+// collision calculation function
+  function collision(source, target) {
+    var dx = source.x - target.x;
+    var dy = source.y - target.y;
+    var distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < source.radius + target.radius) {
+
+      collisionalAngle = Math.atan2(dy, dx);
+      source.magnitude = Math.sqrt(source.xSpeed * source.xSpeed + source.ySpeed * source.ySpeed);
+      target.magnitude = Math.sqrt(target.xSpeed * target.xSpeed + target.ySpeed * target.ySpeed);
+      source.direction = Math.atan2(source.ySpeed, source.xSpeed);
+      target.direction = Math.atan2(target.ySpeed, target.xSpeed);
+      source.xSpeedNew =  source.magnitude * Math.cos(source.direction - collisionalAngle);
+      source.ySpeedNew =  source.magnitude * Math.sin(source.direction - collisionalAngle);
+      target.xSpeedNew =  target.magnitude * Math.cos(target.direction - collisionalAngle);
+      target.ySpeedNew =  target.magnitude * Math.sin(target.direction - collisionalAngle);
+      source.xSpeedFinal = ((source.radius - target.radius) * source.xSpeedNew + (target.radius + target.radius) * target.xSpeedNew) / (source.radius + target.radius);
+      target.xSpeedFinal = ((source.radius + source.radius) * source.xSpeedNew + (target.radius - source.radius) * target.xSpeedNew) / (source.radius + target.radius);
+      source.ySpeedFinal = source.ySpeedNew;
+      target.ySpeedFinal = target.ySpeedNew;
+
+
+      source.xSpeedLast = Math.cos(collisionalAngle) * source.xSpeedFinal + Math.cos(collisionalAngle + Math.PI / 2) * source.ySpeedFinal;
+      source.ySpeedLast = Math.sin(collisionalAngle) * source.xSpeedFinal + Math.sin(collisionalAngle + Math.PI / 2) * source.ySpeedFinal;
+
+      source.xSpeed = source.xSpeedLast * 1.1;
+      source.ySpeed = source.ySpeedLast * 1.1;
+
+      target.xSpeedLast = Math.cos(collisionalAngle) * target.xSpeedFinal + Math.cos(collisionalAngle + Math.PI / 2) * target.ySpeedFinal;
+      target.ySpeedLast = Math.sin(collisionalAngle) * target.xSpeedFinal + Math.sin(collisionalAngle + Math.PI / 2) * target.ySpeedFinal;
+
+      target.xSpeed = target.xSpeedLast * 1.1;
+      target.ySpeed = target.ySpeedLast * 1.1;    
+    }
+  }
+
+
+
 // top canvas
   var canvasTop = document.getElementById('data');
   var ct = canvasTop.getContext('2d');
@@ -517,8 +558,11 @@ function Enemy() {
   this.distance = 0;
   this.sparkCount = Math.floor(Math.random() * (game.sparksMax-game.sparksMin) + game.sparksMin);
   this.target = player;
+  this.collisionTimeDefault = 2;
+  this.collisionTime = this.collisionTimeDefault;
   
   this.render = function () {
+    this.isCollision();
     this.isDead();
     this.isHit();
     this.followPlayer();
@@ -569,6 +613,13 @@ function Enemy() {
       this.delete();
       this.spark();
     } 
+  }
+
+  this.isCollision = function () {
+    for (enemy of enemies) {
+      if (enemy == this) { continue; }
+      collision(this, enemy);
+    }
   }
   
   this.followPlayer = function () {
@@ -711,9 +762,7 @@ function Enemy() {
         document.mozPointerLockElement === canvas) {
       console.log('The pointer lock status is now locked');
       document.addEventListener("mousemove", updatePosition, false);
-
       document.addEventListener('mousedown', mouseDownHandler, false);
-      document.addEventListener('mouseup', mouseUpHandler, false);
       
       document.addEventListener('keydown', keydownHandler, false);
       document.addEventListener('keyup', keyupHandler, false);
@@ -722,9 +771,7 @@ function Enemy() {
     } else {
       console.log('The pointer lock status is now unlocked');
       document.removeEventListener("mousemove", updatePosition, false);
-
       document.removeEventListener('mousedown', mouseDownHandler, false);
-      document.removeEventListener('mouseup', mouseUpHandler, false);
       
       document.removeEventListener('keydown', keydownHandler, false);
       document.removeEventListener('keyup', keyupHandler, false);
@@ -740,19 +787,12 @@ function Enemy() {
 
   function mouseDownHandler(e) {
     if (e.button === 0) {
-      mouse.down = true;
-    }
-    if (e.button === 1) {
-      if (mouse.alwaysDown) { mouse.alwaysDown = false; }
-      else                  { mouse.alwaysDown = true; }
+      if (mouse.down) { mouse.down = false; }
+      else            { mouse.down = true; }
     }
     if (e.button === 2) {
       player.bomb();
     }
-  }
-
-  function mouseUpHandler() {
-    mouse.down = false;
   }
 
 
