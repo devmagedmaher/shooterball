@@ -53,7 +53,6 @@
 
 // text data
   var data = {
-    playing: false,
     
     bullets: 0,
     enemies: 0,
@@ -87,23 +86,27 @@
 
 // game variables
   var game = {
+
     bulletInterval: 60 * 0.08,
     bulletSizeMin: 1,
     bulletSizeMax: 3,
-    bulletPower: 1,
+    bulletPower: 2,
     
     enemyInterval: 60 * 1,
     enemySpeed: 0.2,
     enemySizeMin: 10,
     enemySizeMax: 20,
-    
-    sparksMin: 10,
-    sparksMax: 30,
+    enemyDirections: 1, // from 1 to 4 only;
+
+    sparksMin: 30,
+    sparksMax: 60,
     sparkSizeMin: 0.5,
-    sparkSizeMax: 2,
+    sparkSizeMax: 2.5,
 
     bombSizeMin: 20,
     bombSizeMax: 60,
+
+    playing: false,
 
     play: function () {
       game.playing = true;
@@ -111,6 +114,7 @@
 
     pause: function () {
       game.playing = false;
+      document.exitPointerLock();
     }
     
   };
@@ -227,6 +231,9 @@ function Bomb(x, y) {
     c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
     c.stroke();
     c.restore();
+    // c.clip();
+    // c.fillStyle = '#000';
+    // c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
   };
 
   this.live = function () {
@@ -380,6 +387,7 @@ var player = {
   isDead: function () {
     if (this.life < 0) {
       game.pause();
+      this.life = this.radius;
     }
   },
   
@@ -436,7 +444,7 @@ function Spark(x, y, color = '#fff') {
   this.radius = 1;
   this.xSpeed = Math.random() * 26 - 13;
   this.ySpeed = Math.random() * 26 - 13;
-  this.fraction = Math.random() * 0.1 + 0.98;
+  this.fraction = Math.random() * 0.01 + 0.98;
  this.life = Math.random() * 60 * 0.3;
   this.color = color;
  
@@ -569,7 +577,7 @@ function Bullet() {
 
 
 function Enemy() {
-  this.i = Math.floor(Math.random() * 4);
+  this.i = Math.floor(Math.random() * game.enemyDirections);
   this.xArray = [
     Math.random() * canvas.width,
     Math.random() * canvas.width,
@@ -700,6 +708,34 @@ function Enemy() {
 
 
 
+
+// draw pause text
+function drawPauseText() {
+  c.save();
+  c.beginPath();
+  c.font = 'bold 48px tahoma';
+  c.textAlign = 'center';
+  c.strokeStyle = '#000';
+  c.lineWidth = 10;
+  c.strokeText('Click to START!..', canvas.width/2, canvas.height/2);
+  c.fillStyle = '#fff';
+  c.fillText('Click to START!..', canvas.width/2, canvas.height/2);
+  c.restore();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // counters
   var bulletIntervalCounter = 0;
   var enemyIntervalCounter = 0;
@@ -764,6 +800,8 @@ function Enemy() {
       data.sparks = sparks.length;
       drawText();
 
+    } else {
+      drawPauseText();
     }
     requestAnimationFrame(draw);  
   }
