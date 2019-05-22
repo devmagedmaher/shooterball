@@ -27,14 +27,16 @@
       source.xSpeedLast = Math.cos(collisionalAngle) * source.xSpeedFinal + Math.cos(collisionalAngle + Math.PI / 2) * source.ySpeedFinal;
       source.ySpeedLast = Math.sin(collisionalAngle) * source.xSpeedFinal + Math.sin(collisionalAngle + Math.PI / 2) * source.ySpeedFinal;
 
-      source.xSpeed = source.xSpeedLast * 1.1;
-      source.ySpeed = source.ySpeedLast * 1.1;
+      var m = 1.01;
+
+      source.xSpeed = source.xSpeedLast * m;
+      source.ySpeed = source.ySpeedLast * m;
 
       target.xSpeedLast = Math.cos(collisionalAngle) * target.xSpeedFinal + Math.cos(collisionalAngle + Math.PI / 2) * target.ySpeedFinal;
       target.ySpeedLast = Math.sin(collisionalAngle) * target.xSpeedFinal + Math.sin(collisionalAngle + Math.PI / 2) * target.ySpeedFinal;
 
-      target.xSpeed = target.xSpeedLast * 1.1;
-      target.ySpeed = target.ySpeedLast * 1.1;    
+      target.xSpeed = target.xSpeedLast * m;
+      target.ySpeed = target.ySpeedLast * m;
     }
   }
 
@@ -66,8 +68,8 @@
     ct.font = '16px tahoma';
   	ct.textBaseline = 'middle';
     ct.textAlign = 'left';
-    ct.fillText(`Bullets: ${data.bullets}`, 20, canvasTop.height/2);
-    ct.fillText(`Enemies: ${data.enemies}`, 130, canvasTop.height/2);
+    ct.fillText(`xSpeed: ${Math.floor(data.xSpeed*100)}`, 20, canvasTop.height/2);
+    ct.fillText(`ySpeed: ${Math.floor(data.ySpeed*100)}`, 130, canvasTop.height/2);
     ct.fillText(`Sparks: ${data.sparks}`, 240, canvasTop.height/2);
     ct.textAlign = 'right';
     ct.fillText('Click to START game..     press Esc to EXIT ', canvas.width - 40, canvasTop.height/2);
@@ -108,6 +110,8 @@
 
     playing: false,
 
+    alpha: 1,
+
     play: function () {
       game.playing = true;
     },
@@ -115,26 +119,31 @@
     pause: function () {
       game.playing = false;
       document.exitPointerLock();
-    }
-    
-  };
-  var mouse = {
-    xSpeed: 0,
-    ySpeed: 0,
-    down: false,
-    alwaysDown: false
-  }
-  var key = {
-    left: false,
-    right: false,
-    up: false,
-    down: false,
-  };
+      this.key.left = false;
+      this.key.right = false;
+      this.key.up = false;
+      this.key.down = false;
+    },
 
-  var bullets = [];
-  var enemies = [];
-  var sparks = [];
-  var bombs = [];
+		mouse: {
+			xSpeed: 0,
+			ySpeed: 0,
+		},
+
+		key: {
+			left: false,
+			right: false,
+			up: false,
+			down: false,
+			space: false,
+		},
+
+		bullets: [],
+		enemies: [],
+		sparks: [],
+		bombs: []
+
+  };
 
 
 
@@ -178,11 +187,11 @@ var target = {
   },
   
   move: function () {
-    this.x += mouse.xSpeed / (1/this.speed) / 4;
-    this.y += mouse.ySpeed / (1/this.speed) / 4;
+    this.x += game.mouse.xSpeed;// / (1/this.speed) / 4;
+    this.y += game.mouse.ySpeed;// / (1/this.speed) / 4;
     // reset speed mouse to zero
-    mouse.xSpeed = 0;
-    mouse.ySpeed = 0;
+    game.mouse.xSpeed = 0;
+    game.mouse.ySpeed = 0;
   },
   
   isOut: function () {
@@ -247,7 +256,7 @@ function Bomb(x, y) {
     var dx;
     var dy;
     var distance;
-    for (enemy of enemies) {
+    for (enemy of game.enemies) {
       dx = (this.x - enemy.x);
       dy = (this.y - enemy.y);
       distance = Math.sqrt(dx*dx+dy*dy);
@@ -259,7 +268,7 @@ function Bomb(x, y) {
   },
 
   this.delete = function () {
-    bombs.splice(bombs.indexOf(this), 1);
+    game.bombs.splice(game.bombs.indexOf(this), 1);
   }
 }
 
@@ -304,8 +313,10 @@ var player = {
   dashTime: 15,
   dashTimeCounter: 0,
   life: 20,
+  hurt: 1,
   
   render: function () {
+  	// this.hurtEffect();
     this.isDead();
     this.isOut();
     this.move();
@@ -356,12 +367,12 @@ var player = {
     
     // change speed based on keyboard keys
     if (Math.abs(this.ySpeed) < this.maxSpeed) {
-      if (key.up) { this.ySpeed -= this.accel; }
-      if (key.down) { this.ySpeed += this.accel; }  
+      if (game.key.up) { this.ySpeed -= this.accel; }
+      if (game.key.down) { this.ySpeed += this.accel; }  
     }
     if (Math.abs(this.xSpeed) < this.maxSpeed) {
-      if (key.left) { this.xSpeed -= this.accel; }
-      if (key.right) { this.xSpeed += this.accel; }      
+      if (game.key.left) { this.xSpeed -= this.accel; }
+      if (game.key.right) { this.xSpeed += this.accel; }      
     }
     
     // fraction
@@ -374,7 +385,8 @@ var player = {
 
     // count dash time when needed
     if(this.dashTimeCounter > 0) { this.dashTimeCounting(); }
-
+    data.xSpeed = this.xSpeed;
+    data.ySpeed = this.ySpeed;
   },
   
   isOut: function () {
@@ -397,7 +409,6 @@ var player = {
 
   damage: function () {
     this.bloodScreen();
-    console.log(this.life, (Math.PI*2)*(this.life/this.radius));
   },
 
   bloodScreen: function () {
@@ -419,7 +430,12 @@ var player = {
   },
 
   bomb: function () {
-    bombs.push(new Bomb(this.x, this.y));
+    game.bombs.push(new Bomb(this.x, this.y));
+  },
+
+  hurtEffect: function () {
+  	this.hurt = this.life/this.radius + 0.25;
+  	if (this.hurt > 0 && this.hurt < 1) { game.alpha = this.hurt; }
   }
   
 };
@@ -477,7 +493,7 @@ function Spark(x, y, color = '#fff') {
   };
   
   this.delete = function () {
-    sparks.splice(sparks.indexOf(this), 1);
+    game.sparks.splice(game.sparks.indexOf(this), 1);
   };
 
 }
@@ -541,7 +557,7 @@ function Bullet() {
   this.isHit = function () {
     // store dx, dy and calculate distance
     var dx, dy, distance;
-    for (enemy of enemies) {
+    for (enemy of game.enemies) {
       dx = this.x - enemy.x;
       dy = this.y - enemy.y;
       distance = Math.sqrt(dx*dx + dy*dy);
@@ -555,12 +571,12 @@ function Bullet() {
 
   this.spark = function () {
       for(var i = 0; i < this.sparkCount; i++) {
-        sparks.push(new Spark(this.x, this.y));
+        game.sparks.push(new Spark(this.x, this.y));
       }
   };
   
   this.delete = function () {
-    bullets.splice(bullets.indexOf(this), 1);
+    game.bullets.splice(game.bullets.indexOf(this), 1);
   };
   
 }
@@ -673,7 +689,7 @@ function Enemy() {
   }
 
   this.isCollision = function () {
-    for (enemy of enemies) {
+    for (enemy of game.enemies) {
       if (enemy == this) { continue; }
       collision(this, enemy);
     }
@@ -685,12 +701,12 @@ function Enemy() {
   
   this.spark = function () {
       for(var i = 0; i < this.sparkCount; i++) {
-        sparks.push(new Spark(this.x, this.y, '#f30'));
+        game.sparks.push(new Spark(this.x, this.y, '#f30'));
       }
   };
   
   this.delete = function () {
-    enemies.splice(enemies.indexOf(this), 1);
+    game.enemies.splice(game.enemies.indexOf(this), 1);
   }
 
 }
@@ -747,7 +763,11 @@ function drawPauseText() {
   function draw() {
     if (game.playing) {
 
-      c.clearRect(0, 0, canvas.width, canvas.height);
+      // c.clearRect(0, 0, canvas.width, canvas.height);
+      c.save();
+      c.fillStyle = `rgba(0,0,0,${game.alpha})`;
+      c.fillRect(0,0,canvas.width,canvas.height);
+      c.restore();
 
       // draw player
       player.render();
@@ -756,10 +776,10 @@ function drawPauseText() {
       target.render();
 
       // add bullets to array
-      if (key.space) {
+      if (game.key.space) {
         bulletIntervalCounter++;
         if (bulletIntervalCounter >= game.bulletInterval) {
-          bullets.push(new Bullet());
+          game.bullets.push(new Bullet());
           bulletIntervalCounter = 0;
         }
       } else {
@@ -767,7 +787,7 @@ function drawPauseText() {
       }
 
       // draw bullets
-      for (bullet of bullets) {
+      for (bullet of game.bullets) {
         bullet.render();
       }
 
@@ -775,29 +795,29 @@ function drawPauseText() {
       enemyIntervalCounter++;
       if (enemyIntervalCounter >= game.enemyInterval) {
         enemyIntervalCounter = 0;
-        enemies.push(new Enemy());
+        game.enemies.push(new Enemy());
       }
 
       // draw enemies
-      for (enemy of enemies) {
+      for (enemy of game.enemies) {
         enemy.render();
       }
 
 
       // draw sparks
-      for (spark of sparks) {
+      for (spark of game.sparks) {
         spark.render();
       }
 
       // draw bombs
-      for (bomb of bombs) {
+      for (bomb of game.bombs) {
         bomb.render();
       }
 
       // draw text
-      data.bullets = bullets.length;
-      data.enemies = enemies.length;
-      data.sparks = sparks.length;
+      data.bullets = game.bullets.length;
+      data.enemies = game.enemies.length;
+      data.sparks = game.sparks.length;
       drawText();
 
     } else {
@@ -868,8 +888,8 @@ function drawPauseText() {
   }
 
   function updatePosition(e) {
-    mouse.xSpeed += e.movementX;
-    mouse.ySpeed += e.movementY;
+    game.mouse.xSpeed += e.movementX;
+    game.mouse.ySpeed += e.movementY;
   }
 
   function mouseDownHandler(e) {
@@ -883,18 +903,18 @@ function drawPauseText() {
 
 
   function keydownHandler(e) {
-    if (e.key == 'w' || e.key == 'Up' || e.key == 'ArrowUp') { key.up = true; }
-    if (e.key == 'a' || e.key == 'Left' || e.key == 'ArrowLeft') { key.left = true; }
-    if (e.key == 's' || e.key == 'Down' || e.key == 'ArrowDown') { key.down = true; }
-    if (e.key == 'd' || e.key == 'Right' || e.key == 'ArrowRight') { key.right = true; }
-    if (e.key == ' ') { if (key.space) { key.space = false; } else { key.space = true; } }
+    if (e.key == 'w' || e.key == 'Up' || e.key == 'ArrowUp') { game.key.up = true; }
+    if (e.key == 'a' || e.key == 'Left' || e.key == 'ArrowLeft') { game.key.left = true; }
+    if (e.key == 's' || e.key == 'Down' || e.key == 'ArrowDown') { game.key.down = true; }
+    if (e.key == 'd' || e.key == 'Right' || e.key == 'ArrowRight') { game.key.right = true; }
+    if (e.key == ' ') { if (game.key.space) { game.key.space = false; } else { game.key.space = true; } }
   }
 
   function keyupHandler(e) {
-    if (e.key == 'w' || e.key == 'Up' || e.key == 'ArrowUp') { key.up = false; }
-    if (e.key == 'a' || e.key == 'Left' || e.key == 'ArrowLeft') { key.left = false; }
-    if (e.key == 's' || e.key == 'Down' || e.key == 'ArrowDown') { key.down = false; }
-    if (e.key == 'd' || e.key == 'Right' || e.key == 'ArrowRight') { key.right = false; }
+    if (e.key == 'w' || e.key == 'Up' || e.key == 'ArrowUp') { game.key.up = false; }
+    if (e.key == 'a' || e.key == 'Left' || e.key == 'ArrowLeft') { game.key.left = false; }
+    if (e.key == 's' || e.key == 'Down' || e.key == 'ArrowDown') { game.key.down = false; }
+    if (e.key == 'd' || e.key == 'Right' || e.key == 'ArrowRight') { game.key.right = false; }
   }
 
 
