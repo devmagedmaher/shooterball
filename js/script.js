@@ -2,6 +2,97 @@
 
 
 
+
+
+
+
+
+// game variables
+  var game = {
+
+    bulletInterval: 60 * 0.08,
+    bulletSizeMin: 1,
+    bulletSizeMax: 3,
+    bulletPower: 2,
+    bulletSpeed: 30,
+    
+    enemyInterval: 60 * 1,
+    enemySpeed: 0.2,
+    enemySizeMin: 10,
+    enemySizeMax: 20,
+    enemyDirections: 1, // from 1 to 4 only;
+    maxEnemis: 5,
+
+    sparksMin: 30,
+    sparksMax: 60,
+    sparkSizeMin: 0.5,
+    sparkSizeMax: 2.5,
+
+    bombSizeMin: 20,
+    bombSizeMax: 60,
+
+    playing: false,
+
+    alpha: 1,
+
+    play: function () {
+      game.playing = true;
+    },
+
+    pause: function () {
+      game.playing = false;
+      document.exitPointerLock();
+      this.key.left = false;
+      this.key.right = false;
+      this.key.up = false;
+      this.key.down = false;
+    },
+
+    mouse: {
+      xSpeed: 0,
+      ySpeed: 0,
+    },
+
+    key: {
+      left: false,
+      right: false,
+      up: false,
+      down: false,
+      space: false,
+    },
+
+    bullets: [],
+    enemies: [],
+    sparks: [],
+    bombs: [],
+
+    score: 0,
+    enemiesDefeated: 0,
+
+    reset: function () {
+      this.bullets = [];
+      this.enemies = [];
+      this.sparks = [];
+      this.bombs = [];
+
+      score = 0;0
+      enemiesDefeated = 0;
+
+      this.key.left = false;
+      this.key.right = false;
+      this.key.up = false;
+      this.key.down = false;
+
+      alpha = 1;
+    }
+
+  };
+
+
+
+
+
+
 // collision calculation function
   function collision(source, target) {
     var dx = source.x - target.x;
@@ -68,89 +159,13 @@
     ct.font = '16px tahoma';
   	ct.textBaseline = 'middle';
     ct.textAlign = 'left';
-    ct.fillText(`xSpeed: ${Math.floor(data.xSpeed*100)}`, 20, canvasTop.height/2);
-    ct.fillText(`ySpeed: ${Math.floor(data.ySpeed*100)}`, 130, canvasTop.height/2);
-    ct.fillText(`Sparks: ${data.sparks}`, 240, canvasTop.height/2);
+    ct.fillText(`Score: ${Math.floor(game.score)}`, 20, canvasTop.height/2);
+    ct.fillText(`Enemies defeated: ${Math.floor(game.enemiesDefeated)}`, 130, canvasTop.height/2);
+    // ct.fillText(`Sparks: ${data.sparks}`, 240, canvasTop.height/2);
     ct.textAlign = 'right';
     ct.fillText('Click to START game..     press Esc to EXIT ', canvas.width - 40, canvasTop.height/2);
   }
   drawText();
-
-
-
-
-
-
-
-
-
-
-
-// game variables
-  var game = {
-
-    bulletInterval: 60 * 0.08,
-    bulletSizeMin: 1,
-    bulletSizeMax: 3,
-    bulletPower: 2,
-    
-    enemyInterval: 60 * 1,
-    enemySpeed: 0.2,
-    enemySizeMin: 10,
-    enemySizeMax: 20,
-    enemyDirections: 1, // from 1 to 4 only;
-
-    sparksMin: 30,
-    sparksMax: 60,
-    sparkSizeMin: 0.5,
-    sparkSizeMax: 2.5,
-
-    bombSizeMin: 20,
-    bombSizeMax: 60,
-
-    playing: false,
-
-    alpha: 1,
-
-    play: function () {
-      game.playing = true;
-    },
-
-    pause: function () {
-      game.playing = false;
-      document.exitPointerLock();
-      this.key.left = false;
-      this.key.right = false;
-      this.key.up = false;
-      this.key.down = false;
-    },
-
-		mouse: {
-			xSpeed: 0,
-			ySpeed: 0,
-		},
-
-		key: {
-			left: false,
-			right: false,
-			up: false,
-			down: false,
-			space: false,
-		},
-
-		bullets: [],
-		enemies: [],
-		sparks: [],
-		bombs: []
-
-  };
-
-
-
-
-
-
-
 
 
 
@@ -260,9 +275,9 @@ function Bomb(x, y) {
       dx = (this.x - enemy.x);
       dy = (this.y - enemy.y);
       distance = Math.sqrt(dx*dx+dy*dy);
-      if (distance < this.radius + enemy.radius) {
-        enemy.life -= 0.1;
-        enemy.target = this;
+      if (distance < this.radius + enemy.radius && enemy.radius < this.radius) {
+        enemy.damage(this.radius/100);
+        enemy.setTarget(this);
       }
     }
   },
@@ -327,18 +342,19 @@ var player = {
   draw: function () {
     c.save();
 
-    c.beginPath();
     c.translate(this.x, this.y);
     c.rotate(this.angel);
     c.translate(this.x*-1, this.y*-1);
-    c.fillStyle = "#fff";
-    c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
-    c.fill();
-
     c.beginPath();
+    c.fillStyle = "#fff";
     c.moveTo(this.x, this.y - this.radius);
     c.lineTo(this.x-this.radius-(this.fireCounter*3), this.y);
     c.lineTo(this.x, this.y + this.radius);
+    c.fill();
+
+    c.beginPath();
+    c.fillStyle = "#f33";
+    c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
     c.fill();
 
     c.beginPath();
@@ -349,9 +365,11 @@ var player = {
 
     c.beginPath();
     c.lineWidth = this.radius/5;
-    c.strokeStyle = '#e00';
+    c.fillStyle = '#fff';
     c.arc(this.x, this.y, this.radius, 0, (Math.PI*2)*(this.life/this.radius));
-    c.stroke();
+    c.lineTo(this.x, this.y);
+    c.closePath();
+    c.fill();
 
     c.restore();
   },
@@ -514,13 +532,13 @@ function Spark(x, y, color = '#fff') {
 function Bullet() {
   this.x = player.x;
   this.y = player.y;
-  this.speed = 15;
+  this.speed = game.bulletSpeed;
   this.xSpeed = 0;
   this.ySpeed = 0;
   this.radius = Math.random() * (game.bulletSizeMax-game.bulletSizeMin) + game.bulletSizeMin;
   this.angel = Math.atan2((target.y - player.y), (target.x - player.x));
   this.sparkCount = Math.floor(Math.random() * (game.sparksMax-game.sparksMin) + game.sparksMin);
-  this.power = game.bulletPower;
+  this.power = game.bulletPower*this.radius;
   
   this.render = function () {
     this.isHit();
@@ -564,7 +582,7 @@ function Bullet() {
       if (distance < this.radius + enemy.radius) {
         this.spark();
         this.delete();
-        enemy.life -= this.radius*this.power;
+        enemy.damage(this.power);
       }      
     }
   };
@@ -622,6 +640,7 @@ function Enemy() {
   this.collisionTimeDefault = 2;
   this.collisionTime = this.collisionTimeDefault;
   this.life = this.radius;
+  this.color = '#f00';
 
   this.render = function () {
     this.isCollision();
@@ -635,7 +654,7 @@ function Enemy() {
   this.draw = function () {
     c.save();
     c.beginPath();
-    c.fillStyle = '#f00';
+    c.fillStyle = this.color;
     c.arc(this.x ,this.y, this.radius, 0, Math.PI*2);
     c.fill();
     c.beginPath();
@@ -699,14 +718,25 @@ function Enemy() {
     this.angel = Math.atan2((this.target.y - this.y), (this.target.x - this.x));
   }
   
+  this.setTarget = function (target) {
+    this.target = target;
+    this.color = '#a00';
+  }
+
   this.spark = function () {
       for(var i = 0; i < this.sparkCount; i++) {
         game.sparks.push(new Spark(this.x, this.y, '#f30'));
       }
   };
   
+  this.damage = function (power) {
+    this.life -= power;
+    game.score += power;
+  }
+
   this.delete = function () {
     game.enemies.splice(game.enemies.indexOf(this), 1);
+    game.enemiesDefeated++;
   }
 
 }
@@ -793,7 +823,7 @@ function drawPauseText() {
 
       // add enemies to array
       enemyIntervalCounter++;
-      if (enemyIntervalCounter >= game.enemyInterval) {
+      if (enemyIntervalCounter >= game.enemyInterval && game.enemies.length < game.maxEnemis) {
         enemyIntervalCounter = 0;
         game.enemies.push(new Enemy());
       }
