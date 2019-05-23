@@ -15,6 +15,8 @@
     bulletSizeMax: 3,
     bulletPower: 2,
     bulletSpeed: 30,
+    bulletCost: 0.07,
+    bulletChargeSpeed: 0.01,
     
     enemyInterval: 60 * 1,
     enemySpeed: 0.2,
@@ -68,6 +70,7 @@
 
     score: 0,
     enemiesDefeated: 0,
+    remainingBullets: Math.PI*2,
 
     reset: function () {
       this.bullets = [];
@@ -161,7 +164,7 @@
     ct.textAlign = 'left';
     ct.fillText(`Score: ${Math.floor(game.score)}`, 20, canvasTop.height/2);
     ct.fillText(`Enemies defeated: ${Math.floor(game.enemiesDefeated)}`, 130, canvasTop.height/2);
-    // ct.fillText(`Sparks: ${data.sparks}`, 240, canvasTop.height/2);
+    // ct.fillText(`bullets: ${game.remainingBullets}`, 240, canvasTop.height/2);
     ct.textAlign = 'right';
     ct.fillText('Click to START game..     press Esc to EXIT ', canvas.width - 40, canvasTop.height/2);
   }
@@ -329,9 +332,11 @@ var player = {
   dashTimeCounter: 0,
   life: 20,
   hurt: 1,
+  bullets: game.remainingBullets,
   
   render: function () {
   	// this.hurtEffect();
+    this.calcBullets();
     this.isDead();
     this.isOut();
     this.move();
@@ -342,9 +347,19 @@ var player = {
   draw: function () {
     c.save();
 
+    // point to mouse
     c.translate(this.x, this.y);
     c.rotate(this.angel);
     c.translate(this.x*-1, this.y*-1);
+
+    // draw bullets radial
+    c.beginPath();
+    c.lineWidth = this.radius/5;
+    c.strokeStyle = '#555';
+    c.arc(this.x, this.y, this.radius + c.lineWidth, 0, this.bullets);
+    c.stroke();
+
+    // draw fire
     c.beginPath();
     c.fillStyle = "#fff";
     c.moveTo(this.x, this.y - this.radius);
@@ -352,17 +367,13 @@ var player = {
     c.lineTo(this.x, this.y + this.radius);
     c.fill();
 
+    // draw main circle
     c.beginPath();
     c.fillStyle = "#f33";
-    c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+    c.arc(this.x, this.y, this.radius - 1, 0, Math.PI*2);
     c.fill();
 
-    c.beginPath();
-    c.lineWidth = this.radius/10;
-    c.strokeStyle = '#900';
-    c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
-    c.stroke();
-
+    // draw health radial
     c.beginPath();
     c.lineWidth = this.radius/5;
     c.fillStyle = '#fff';
@@ -377,6 +388,14 @@ var player = {
   fire: function () {
     this.fireCounter -= this.fireSpeed;
     if (this.fireCounter < 0) { this.fireCounter = this.fireDefault; }
+  },
+
+  calcBullets: function () {
+    if (game.remainingBullets <= game.bulletCost) {
+      this.bullets = game.bulletCost;
+    } else {
+      this.bullets = game.remainingBullets;
+    }
   },
 
   move: function () {
@@ -807,13 +826,21 @@ function drawPauseText() {
 
       // add bullets to array
       if (game.key.space) {
-        bulletIntervalCounter++;
-        if (bulletIntervalCounter >= game.bulletInterval) {
-          game.bullets.push(new Bullet());
-          bulletIntervalCounter = 0;
+        if (game.remainingBullets > 0) {
+          bulletIntervalCounter++;
+          if (bulletIntervalCounter >= game.bulletInterval) {
+            game.bullets.push(new Bullet());
+            bulletIntervalCounter = 0;
+            game.remainingBullets -= game.bulletCost;
+          }
+        } else {
+          game.key.space = false;
         }
       } else {
         bulletIntervalCounter = 0;
+        if (game.remainingBullets < Math.PI*2) {
+          game.remainingBullets += game.bulletChargeSpeed;
+        }
       }
 
       // draw bullets
