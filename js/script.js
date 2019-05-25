@@ -32,6 +32,9 @@
 
     bombSizeMin: 20,
     bombSizeMax: 60,
+    bombCost: 0.04,
+    bombChargeSpeed: 0.002,
+    bombLoadSpeed: 0.8, // speed of increasing radius
 
     playing: false,
 
@@ -39,15 +42,16 @@
 
     play: function () {
       game.playing = true;
+      this.reset();
     },
 
     pause: function () {
       game.playing = false;
       document.exitPointerLock();
-      this.key.left = false;
-      this.key.right = false;
-      this.key.up = false;
-      this.key.down = false;
+      // this.key.left = false;
+      // this.key.right = false;
+      // this.key.up = false;
+      // this.key.down = false;
     },
 
     mouse: {
@@ -71,6 +75,7 @@
     score: 0,
     enemiesDefeated: 0,
     remainingBullets: Math.PI*2,
+    remainingBomb: Math.PI*2,
 
     reset: function () {
       this.bullets = [];
@@ -239,13 +244,19 @@ var target = {
 
 
 
-function Bomb(x, y) {
-  this.x = x;
-  this.y = y;
-  this.radius = Math.random() * (game.bombSizeMax-game.bombSizeMin) + game.bombSizeMin;
+function Bomb() {
+  this.x = 0;
+  this.y = 0;
+  this.radius = game.bombSizeMin;
+  this.isLoading = true;
+  this.radiusAccel = 0.02;
 
   this.render = function () {
     this.live();
+    if (this.isLoading) {
+      this.move();
+      this.load();
+    }
     this.isHit();
     this.draw();
   };
@@ -263,24 +274,40 @@ function Bomb(x, y) {
     // c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
   };
 
+  this.move = function () {
+    this.x = player.x;
+    this.y = player.y;
+  };
+
+  this.load = function () {
+    this.radius += game.bombLoadSpeed;
+  };
+
   this.live = function () {
-    this.radius -= 0.02;
-    if (this.radius <= game.bombSizeMin) {
+    this.radiusAccel += 0.0005;
+    this.radius -= this.radiusAccel;
+    if (this.radius <= 1) {
       this.delete();
     }
   },
 
   this.isHit = function () {
-    var dx;
-    var dy;
-    var distance;
-    for (enemy of game.enemies) {
-      dx = (this.x - enemy.x);
-      dy = (this.y - enemy.y);
-      distance = Math.sqrt(dx*dx+dy*dy);
-      if (distance < this.radius + enemy.radius && enemy.radius < this.radius) {
-        enemy.damage(this.radius/100);
-        enemy.setTarget(this);
+    if (!this.isLoading) {
+      var dx;
+      var dy;
+      var distance;
+      for (enemy of game.enemies) {
+        dx = (this.x - enemy.x);
+        dy = (this.y - enemy.y);
+        distance = Math.sqrt(dx*dx+dy*dy);
+        if (enemy.radius < this.radius) {
+          if (distance < this.radius + enemy.radius) {
+            enemy.damage(this.radius/100);
+            enemy.setTarget(this);
+          }
+        } else {
+          enemy.setTarget(player);
+        }
       }
     }
   },
@@ -333,12 +360,15 @@ var player = {
   life: 20,
   hurt: 1,
   bullets: game.remainingBullets,
+  bomb: game.remainingBomb,
+  loadingBomb: null,
   
   render: function () {
   	// this.hurtEffect();
     this.calcBullets();
     this.isDead();
     this.isOut();
+    this.bombBar();
     this.move();
     this.fire();
     this.draw();
@@ -352,35 +382,41 @@ var player = {
     c.rotate(this.angel);
     c.translate(this.x*-1, this.y*-1);
 
-    // draw bullets radial
-    c.beginPath();
-    c.lineWidth = this.radius/5;
-    c.strokeStyle = '#555';
-    c.arc(this.x, this.y, this.radius + c.lineWidth, 0, this.bullets);
-    c.stroke();
-
     // draw fire
     c.beginPath();
     c.fillStyle = "#fff";
-    c.moveTo(this.x, this.y - this.radius);
+    c.moveTo(this.x, this.y - this.radius + 1);
     c.lineTo(this.x-this.radius-(this.fireCounter*3), this.y);
-    c.lineTo(this.x, this.y + this.radius);
+    c.lineTo(this.x, this.y + this.radius - 1);
     c.fill();
 
     // draw main circle
     c.beginPath();
-    c.fillStyle = "#f33";
-    c.arc(this.x, this.y, this.radius - 1, 0, Math.PI*2);
+    c.fillStyle = "#fff";
+    c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
     c.fill();
 
-    // draw health radial
+    c.lineWidth = 5;
+
+    // draw health radial bar
     c.beginPath();
-    c.lineWidth = this.radius/5;
-    c.fillStyle = '#fff';
+    c.strokeStyle = '#a00';
     c.arc(this.x, this.y, this.radius, 0, (Math.PI*2)*(this.life/this.radius));
-    c.lineTo(this.x, this.y);
-    c.closePath();
-    c.fill();
+    c.stroke();
+
+    // // draw bullets radial
+    c.beginPath();
+    c.strokeStyle = '#555';
+    c.arc(this.x, this.y, this.radius - 6, 0, this.bullets);
+    c.stroke();
+
+    // draw bomb radial bar
+    c.beginPath();
+    c.strokeStyle = '#005';
+    c.arc(this.x, this.y, this.radius - 13, 0, this.bomb);
+    c.stroke();
+
+
 
     c.restore();
   },
@@ -463,11 +499,38 @@ var player = {
   },
 
   dashTimeCounting: function () {
-    this.dashTimeCounter--;
+    this.dashTimeCounter--; 
   },
 
-  bomb: function () {
-    game.bombs.push(new Bomb(this.x, this.y));
+  bombBar: function () {
+    if (this.loadingBomb instanceof Bomb) {
+      if (this.bomb > 0) {
+        this.bomb -= game.bombCost;
+      } else if (this.bomb <= 0) {
+        this.bomb = 0;
+        this.bombRelease();
+      }
+    } else {
+      if (this.bomb < Math.PI*2) {
+        this.bomb += game.bombChargeSpeed;
+      } else {
+        this.bomb = Math.PI*2;
+      }
+    }
+  },
+
+  bombAdd: function () {
+    this.loadingBomb = new Bomb();
+    game.bombs.push(this.loadingBomb);
+    this.bombIsLoading = true;
+  },
+
+  bombRelease: function () {
+    if (this.loadingBomb) {
+      this.bombIsLoading = false;
+      this.loadingBomb.isLoading = false;
+      this.loadingBomb = null;
+    }
   },
 
   hurtEffect: function () {
@@ -706,7 +769,6 @@ function Enemy() {
     this.distance = Math.sqrt(this.dx*this.dx + this.dy*this.dy);
     if (this.distance < this.radius + player.radius) {
       if (player.dashTimeCounter > 0) {
-        console.log('killed enemy');
         this.spark();
       } else {
         player.damage();
@@ -739,14 +801,18 @@ function Enemy() {
   
   this.setTarget = function (target) {
     this.target = target;
-    this.color = '#a00';
+    if (target instanceof Bomb) {
+      this.color = '#a00';
+    } else {
+      this.color = '#f00';
+    }
   }
 
   this.spark = function () {
       for(var i = 0; i < this.sparkCount; i++) {
         game.sparks.push(new Spark(this.x, this.y, '#f30'));
       }
-  };
+  }
   
   this.damage = function (power) {
     this.life -= power;
@@ -927,20 +993,22 @@ function drawPauseText() {
       console.log('The pointer lock status is now locked');
       document.addEventListener("mousemove", updatePosition, false);
       document.addEventListener('mousedown', mouseDownHandler, false);
+      document.addEventListener('mouseup', mouseUpHandler, false);
       
       document.addEventListener('keydown', keydownHandler, false);
       document.addEventListener('keyup', keyupHandler, false);
       
-      game.play();
+      if (!game.playing) { game.play(); }
     } else {
       console.log('The pointer lock status is now unlocked');
       document.removeEventListener("mousemove", updatePosition, false);
       document.removeEventListener('mousedown', mouseDownHandler, false);
+      document.removeEventListener('mouseup', mouseUpHandler, false);
       
       document.removeEventListener('keydown', keydownHandler, false);
       document.removeEventListener('keyup', keyupHandler, false);
 
-      game.pause();
+      if (game.playing) { game.pause(); }
     }
   }
 
@@ -954,7 +1022,13 @@ function drawPauseText() {
       player.dash();
     }
     if (e.button === 2) {
-      player.bomb();
+      player.bombAdd();
+    }
+  }
+
+  function mouseUpHandler(e) {
+    if (e.button === 2) {
+      player.bombRelease();
     }
   }
 
