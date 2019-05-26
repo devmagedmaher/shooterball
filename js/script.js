@@ -382,12 +382,11 @@ var player = {
   
   render: function () {
   	this.hurtEffect();
-    this.calcBullets();
     this.isDead();
     this.isOut();
     this.bombBar();
-    this.move();
     this.shooting();
+    this.move();
     this.fire();
     this.draw();
   },
@@ -425,13 +424,13 @@ var player = {
     // // draw bullets radial
     c.beginPath();
     c.strokeStyle = '#555';
-    c.arc(this.x, this.y, this.radius - 6, 0, this.bullets);
+    c.arc(this.x, this.y, this.radius - 6, 0, game.remainingBullets);
     c.stroke();
 
     // draw bomb radial bar
     c.beginPath();
     c.strokeStyle = '#005';
-    c.arc(this.x, this.y, this.radius - 13, 0, this.bomb);
+    c.arc(this.x, this.y, this.radius - 13, 0, game.remainingBomb);
     c.stroke();
 
 
@@ -442,14 +441,6 @@ var player = {
   fire: function () {
     this.fireCounter -= this.fireSpeed;
     if (this.fireCounter < 0) { this.fireCounter = this.fireDefault; }
-  },
-
-  calcBullets: function () {
-    if (game.remainingBullets <= game.bulletCost) {
-      this.bullets = game.bulletCost;
-    } else {
-      this.bullets = game.remainingBullets;
-    }
   },
 
   move: function () {
@@ -516,7 +507,7 @@ var player = {
 
   shooting: function () {
     if (game.key.space) {
-      if (game.remainingBullets > 0) {
+      if (game.remainingBullets > game.bulletCost) {
         this.bulletIntervalCounter++;
         if (this.bulletIntervalCounter >= game.bulletInterval) {
           let bullet = new Bullet();
@@ -538,17 +529,17 @@ var player = {
 
   bombBar: function () {
     if (this.loadingBomb instanceof Bomb) {
-      if (this.bomb > 0) {
-        this.bomb -= game.bombCost;
-      } else if (this.bomb <= 0) {
-        this.bomb = 0;
+      if (game.remainingBomb > game.bombCost) {
+        game.remainingBomb -= game.bombCost;
+      } else {
+        game.remainingBomb = 0;
         this.bombRelease();
       }
     } else {
-      if (this.bomb < Math.PI*2) {
-        this.bomb += game.bombChargeSpeed;
+      if (game.remainingBomb < Math.PI*2) {
+        game.remainingBomb += game.bombChargeSpeed;
       } else {
-        this.bomb = Math.PI*2;
+        game.remainingBomb = Math.PI*2;
       }
     }
   },
