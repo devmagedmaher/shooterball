@@ -74,15 +74,15 @@
       this.sparks = [];
       this.bombs = [];
 
-      score = 0;0
-      enemiesDefeated = 0;
+      this.score = 0;
+      this.enemiesDefeated = 0;
 
       this.key.left = false;
       this.key.right = false;
       this.key.up = false;
       this.key.down = false;
 
-      alpha = 1;
+      this.alpha = 1;
     }
 
   };
