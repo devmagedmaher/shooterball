@@ -6,7 +6,7 @@
     bulletSizeMax: 3,
     bulletPower: 2,
     bulletSpeed: 30,
-    bulletCost: 0.07,
+    bulletCost: 0.02,
     bulletChargeSpeed: 0.01,
     
     enemyInterval: 60 * 1,
@@ -28,7 +28,6 @@
     bombLoadSpeed: 0.8, // speed of increasing radius
 
     playing: false,
-
     alpha: 1,
 
     play: function () {
@@ -39,10 +38,6 @@
     pause: function () {
       game.playing = false;
       document.exitPointerLock();
-      // this.key.left = false;
-      // this.key.right = false;
-      // this.key.up = false;
-      // this.key.down = false;
     },
 
     mouse: {
@@ -58,11 +53,13 @@
       space: false,
     },
 
+    // display objects
     bullets: [],
     enemies: [],
     sparks: [],
     bombs: [],
 
+    // states
     score: 0,
     enemiesDefeated: 0,
     remainingBullets: Math.PI*2,
@@ -76,6 +73,9 @@
 
       this.score = 0;
       this.enemiesDefeated = 0;
+      this.remainingBullets = Math.PI*2;
+      this.remainingBomb = Math.PI*2;
+      this.health = Math.PI*2;
 
       this.key.left = false;
       this.key.right = false;
@@ -84,6 +84,7 @@
 
       this.alpha = 1;
     }
+
 
   };
 
@@ -374,6 +375,7 @@ var player = {
   dashTime: 15,
   life: 20,
   hurt: 1,
+  bulletIntervalCounter: 0,
   bullets: game.remainingBullets,
   bomb: game.remainingBomb,
   loadingBomb: null,
@@ -385,6 +387,7 @@ var player = {
     this.isOut();
     this.bombBar();
     this.move();
+    this.shooting();
     this.fire();
     this.draw();
   },
@@ -509,6 +512,28 @@ var player = {
   dash: function () {
     this.xSpeed = this.dashSpeed * Math.cos(this.angel+Math.PI);
     this.ySpeed = this.dashSpeed * Math.sin(this.angel+Math.PI);
+  },
+
+  shooting: function () {
+    if (game.key.space) {
+      if (game.remainingBullets > 0) {
+        this.bulletIntervalCounter++;
+        if (this.bulletIntervalCounter >= game.bulletInterval) {
+          let bullet = new Bullet();
+          game.bullets.push(bullet);
+          this.bulletIntervalCounter = 0;
+          game.remainingBullets -= bullet.radius * game.bulletCost;
+        }
+      } else {
+        game.key.space = false;
+      }
+    } else {
+      bulletIntervalCounter = 0;
+      if (game.remainingBullets < Math.PI*2) {
+        // charging bullets
+        game.remainingBullets += game.bulletChargeSpeed;
+      }
+    }
   },
 
   bombBar: function () {
@@ -879,7 +904,6 @@ function drawPauseText() {
 
 
 // counters
-  var bulletIntervalCounter = 0;
   var enemyIntervalCounter = 0;
 
 
@@ -902,23 +926,6 @@ function drawPauseText() {
       target.render();
 
       // add bullets to array
-      if (game.key.space) {
-        if (game.remainingBullets > 0) {
-          bulletIntervalCounter++;
-          if (bulletIntervalCounter >= game.bulletInterval) {
-            game.bullets.push(new Bullet());
-            bulletIntervalCounter = 0;
-            game.remainingBullets -= game.bulletCost;
-          }
-        } else {
-          game.key.space = false;
-        }
-      } else {
-        bulletIntervalCounter = 0;
-        if (game.remainingBullets < Math.PI*2) {
-          game.remainingBullets += game.bulletChargeSpeed;
-        }
-      }
 
       // draw bullets
       for (bullet of game.bullets) {
