@@ -235,6 +235,17 @@ var target = {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 function Bomb() {
   this.x = 0;
   this.y = 0;
@@ -256,13 +267,19 @@ function Bomb() {
     c.save();
 
     c.beginPath();
+    // c.globalCompositeOperation = 'xor';
+    c.globalCompositeOperation = 'lighter';
     c.strokeStyle = '#fff';
+    c.fillStyle = 'rgba(0,0,255,0.5';
     c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
     c.stroke();
+    c.fill();
     c.restore();
-    // c.clip();
-    // c.fillStyle = '#000';
-    // c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+      // c.clip();
+      // c.strokeStyle = '#0F0';
+      // c.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+      // c.stroke();
+      // c.closePath();
   };
 
   this.move = function () {
@@ -656,15 +673,15 @@ function Bullet() {
         this.spark();
         this.delete();
         enemy.damage(this.power);
-        this.whiteScreen();
+        this.flashScreen();
       }      
     }
   };
 
-  this.whiteScreen = function () {
+  this.flashScreen = function () {
     c.save();
     c.beginPath();
-    c.fillStyle = 'rgba(255,255,255,0.17)';
+    c.fillStyle = 'rgba(255,255,255,0.2)';
     c.fillRect(0, 0, canvas.width, canvas.height);
     c.restore();    
   };
@@ -802,11 +819,6 @@ function Enemy() {
   
   this.setTarget = function (target) {
     this.target = target;
-    if (target instanceof Bomb) {
-      this.color = '#a00';
-    } else {
-      this.color = '#f00';
-    }
   }
 
   this.spark = function () {
