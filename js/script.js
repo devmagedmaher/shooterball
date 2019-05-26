@@ -1,12 +1,3 @@
-
-
-
-
-
-
-
-
-
 // game variables
   var game = {
 
@@ -364,7 +355,7 @@ var player = {
   loadingBomb: null,
   
   render: function () {
-  	// this.hurtEffect();
+  	this.hurtEffect();
     this.calcBullets();
     this.isDead();
     this.isOut();
@@ -487,7 +478,7 @@ var player = {
   bloodScreen: function () {
     c.save();
     c.beginPath();
-    c.fillStyle = 'rgba(255,0,0,0.1)';
+    c.fillStyle = 'rgba(255,0,0,0.5)';
     c.fillRect(0, 0, canvas.width, canvas.height);
     c.restore();    
   },
@@ -665,9 +656,19 @@ function Bullet() {
         this.spark();
         this.delete();
         enemy.damage(this.power);
+        this.whiteScreen();
       }      
     }
   };
+
+  this.whiteScreen = function () {
+    c.save();
+    c.beginPath();
+    c.fillStyle = 'rgba(255,255,255,0.17)';
+    c.fillRect(0, 0, canvas.width, canvas.height);
+    c.restore();    
+  };
+
 
   this.spark = function () {
       for(var i = 0; i < this.sparkCount; i++) {
