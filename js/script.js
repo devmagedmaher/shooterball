@@ -158,14 +158,22 @@
     ct.font = '16px tahoma';
   	ct.textBaseline = 'middle';
     ct.textAlign = 'left';
-    ct.fillText(`Score: ${Math.floor(game.score)}`, 20, canvasTop.height/2);
-    ct.fillText(`Enemies defeated: ${Math.floor(game.enemiesDefeated)}`, 130, canvasTop.height/2);
+    // ct.fillText(`Score: ${Math.floor(game.score)}`, 20, canvasTop.height/2);
+    // ct.fillText(`Enemies defeated: ${Math.floor(game.enemiesDefeated)}`, 130, canvasTop.height/2);
     // ct.fillText(`bullets: ${game.remainingBullets}`, 240, canvasTop.height/2);
     ct.textAlign = 'right';
-    ct.fillText('Click to START game..     press Esc to EXIT ', canvas.width - 40, canvasTop.height/2);
+    // ct.fillText('Click to START game..     press Esc to EXIT ', canvas.width - 40, canvasTop.height/2);
   }
   drawText();
 
+
+  function drawStates() {
+    c.beginPath();
+    c.fillStyle = '#dadada';
+    c.font = '14px tahoma';
+    c.textAlign = 'left';
+    c.fillText(`Score: ${Math.round(game.score)}`, 10, 20);
+  }
 
 
 
@@ -364,7 +372,6 @@ var player = {
   dashSpeed: 30,
   dashMode: false,
   dashTime: 15,
-  dashTimeCounter: 0,
   life: 20,
   hurt: 1,
   bullets: game.remainingBullets,
@@ -465,7 +472,6 @@ var player = {
     this.y += this.ySpeed;
 
     // count dash time when needed
-    if(this.dashTimeCounter > 0) { this.dashTimeCounting(); }
     data.xSpeed = this.xSpeed;
     data.ySpeed = this.ySpeed;
   },
@@ -501,13 +507,8 @@ var player = {
   },
 
   dash: function () {
-    this.xSpeed = this.dashSpeed * Math.cos(this.angel);
-    this.ySpeed = this.dashSpeed * Math.sin(this.angel);
-    this.dashTimeCounter = this.dashTime;
-  },
-
-  dashTimeCounting: function () {
-    this.dashTimeCounter--; 
+    this.xSpeed = this.dashSpeed * Math.cos(this.angel+Math.PI);
+    this.ySpeed = this.dashSpeed * Math.sin(this.angel+Math.PI);
   },
 
   bombBar: function () {
@@ -786,12 +787,9 @@ function Enemy() {
     this.dy = this.y - player.y;
     this.distance = Math.sqrt(this.dx*this.dx + this.dy*this.dy);
     if (this.distance < this.radius + player.radius) {
-      if (player.dashTimeCounter > 0) {
-        this.spark();
-      } else {
-        player.damage();
-        player.life -= this.radius/10;
-      }
+      this.spark();
+      player.damage();
+      player.life -= this.radius/10;
       this.delete();
     }
     if (this.distance < this.radius + (player.radius*2)) {
@@ -951,10 +949,7 @@ function drawPauseText() {
       }
 
       // draw text
-      data.bullets = game.bullets.length;
-      data.enemies = game.enemies.length;
-      data.sparks = game.sparks.length;
-      drawText();
+      drawStates();
 
     } else {
       drawPauseText();
