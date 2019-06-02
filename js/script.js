@@ -81,6 +81,7 @@
       this.key.right = false;
       this.key.up = false;
       this.key.down = false;
+      this.key.space = false;
 
       this.alpha = 1;
     }
@@ -375,6 +376,7 @@ var player = {
   dashTime: 15,
   life: 20,
   hurt: 1,
+  isShooting: false,
   bulletIntervalCounter: 0,
   bullets: game.remainingBullets,
   bomb: game.remainingBomb,
@@ -506,7 +508,7 @@ var player = {
   },
 
   shooting: function () {
-    if (game.key.space) {
+    if (this.isShooting) {
       if (game.remainingBullets > game.bulletCost) {
         this.bulletIntervalCounter++;
         if (this.bulletIntervalCounter >= game.bulletInterval) {
@@ -1025,7 +1027,7 @@ function drawPauseText() {
 
   function mouseDownHandler(e) {
     if (e.button === 0) {
-      player.dash();
+      player.isShooting = true;
     }
     if (e.button === 2) {
       player.bombAdd();
@@ -1033,6 +1035,9 @@ function drawPauseText() {
   }
 
   function mouseUpHandler(e) {
+    if (e.button === 0) {
+      player.isShooting = false;
+    }
     if (e.button === 2) {
       player.bombRelease();
     }
@@ -1044,7 +1049,7 @@ function drawPauseText() {
     if (e.key == 'a' || e.key == 'Left' || e.key == 'ArrowLeft') { game.key.left = true; }
     if (e.key == 's' || e.key == 'Down' || e.key == 'ArrowDown') { game.key.down = true; }
     if (e.key == 'd' || e.key == 'Right' || e.key == 'ArrowRight') { game.key.right = true; }
-    if (e.key == ' ') { if (game.key.space) { game.key.space = false; } else { game.key.space = true; } }
+    // if (e.key == ' ') { if (game.key.space) { game.key.space = false; } else { game.key.space = true; } }
   }
 
   function keyupHandler(e) {
