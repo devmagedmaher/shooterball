@@ -1,3 +1,3 @@
 # shooterball
 shooter game with javascript
-try it (https://majedmy.github.io/shooterball/)
+try it (https://devmagedmaher.github.io/shooterball/)
